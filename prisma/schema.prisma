@@ -1,0 +1,58 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "generated/prisma"
+}
+
+generator zod {
+  provider = "zod-prisma-types"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  email       String     @unique
+  password    String
+  created_at  DateTime   @default(now())
+  updated_at  DateTime?
+  phoneNumber String?
+  authToken   AuthToken?
+}
+
+model AuthToken {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  token     String   @unique
+  createdAt DateTime
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String   @unique @db.ObjectId
+}
+
+model Product {
+  id         String      @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  price      Float?
+  type       ProductType
+  data       Json
+  imageUrl   String
+  likes      Int         @default(0)
+  isReserved Boolean     @default(false)
+}
+
+enum ProductType {
+  CLOTHES
+  SHOE
+  HAT
+  PERFUME
+  BAG
+}
