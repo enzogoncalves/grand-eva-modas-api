@@ -323,51 +323,76 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 					error: params.error,
 				});
 
-			const user = await prisma.user
-				.findUnique({
-					where: {
-						id: userId,
-					},
-					select: {
-						reservedProducts: true,
-					},
-				})
-				.catch((prismaError) => {
-					console.log(prismaError);
-					return reply.status(500).send("Unable to find user");
+			try {
+				await prisma.$transaction(async (tx) => {
+					const user = await tx.user
+						.findUnique({
+							where: {
+								id: userId,
+							},
+							select: {
+								reservedProducts: true,
+							},
+						})
+						.catch((prismaError) => {
+							console.log(prismaError);
+							return reply.status(500).send("Unable to find user");
+						});
+
+					if (!user)
+						return reply.status(500).send({ error: "Unable to find user." });
+
+					const product = await tx.product
+						.findUnique({
+							where: {
+								id: params.data.productId,
+							},
+							select: {
+								isReserved: true,
+							},
+						})
+						.catch((prismaError) => {
+							console.log(prismaError);
+							return reply
+								.status(500)
+								.send({ error: "Unable to find product" });
+						});
+
+					if (!product)
+						return reply.status(500).send({ error: "Unable to find product." });
+
+					const isProductAlreadyReserved =
+						user.reservedProducts.indexOf(params.data.productId) !== -1 ||
+						product.isReserved;
+
+					if (isProductAlreadyReserved)
+						return reply.status(200).send({ message: "Product already reserved 2" });
 				});
-
-			if (!user)
-				return reply.status(500).send({ error: "Unable to find user." });
-
-			const isProductAlreadyReserved = user.reservedProducts.indexOf(
-				params.data.productId,
-			);
-
-			if (isProductAlreadyReserved !== -1)
-				return reply.status(200).send({ message: "Product already reserved" });
+			} catch (e) {
+				prismaErrorHandler(reply, e);
+			}
 
 			try {
-				await prisma.product.update({
-					where: {
-						id: params.data.productId,
-					},
-					data: {
-						isReserved: {
-							set: false,
+				await prisma.$transaction(async (tx) => {
+					await tx.product.update({
+						where: {
+							id: params.data.productId,
 						},
-					},
-				});
+						data: {
+							isReserved: true,
+						},
+					});
 
-				await prisma.user.update({
-					where: {
-						id: userId,
-					},
-					data: {
-						likedProducts: {
-							push: params.data.productId,
+					await tx.user.update({
+						where: {
+							id: userId,
 						},
-					},
+						data: {
+							reservedProducts: {
+								push: params.data.productId,
+							},
+						},
+					});
 				});
 
 				return reply.status(200).send();
