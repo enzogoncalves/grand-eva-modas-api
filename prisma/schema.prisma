@@ -19,14 +19,17 @@ datasource db {
 }
 
 model User {
-  id          String     @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  email       String     @unique
-  password    String
-  created_at  DateTime   @default(now())
-  updated_at  DateTime?
-  phoneNumber String?
-  authToken   AuthToken?
+  id               String     @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  email            String     @unique
+  password         String
+  role             UserType   @default(USER)
+  created_at       DateTime   @default(now())
+  updated_at       DateTime?
+  phoneNumber      String?
+  authToken        AuthToken?
+  likedProducts    String[]
+  reservedProducts String[]
 }
 
 model AuthToken {
@@ -45,6 +48,7 @@ model Product {
   type       ProductType
   data       Json
   imageUrl   String
+  imageName  String
   likes      Int         @default(0)
   isReserved Boolean     @default(false)
 }
@@ -55,4 +59,9 @@ enum ProductType {
   HAT
   PERFUME
   BAG
+}
+
+enum UserType {
+  ADMIN
+  USER
 }

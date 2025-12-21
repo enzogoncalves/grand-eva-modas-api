@@ -1,27 +1,31 @@
+import type { FastifyError } from "fastify";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
-import { z } from "zod";
-import { prisma } from "../lib/prisma.js";
-import sharp from "sharp";
-import { storage } from "../lib/firebase.js";
 import { deleteObject, ref, uploadBytes } from "firebase/storage";
-import { equal } from "assert";
-import {
-	JsonValueSchema,
-	ProductSchema,
-	ProductTypeSchema,
-} from "../../prisma/generated/zod/index.js";
-import { ProductType } from "../../prisma/generated/prisma/enums.js";
+import sharp from "sharp";
+import { z } from "zod";
+import { ProductSchema } from "../../prisma/generated/zod/index.js";
+import { storage } from "../lib/firebase.js";
+import { prisma } from "../lib/prisma.js";
+import { prismaErrorHandler } from "../lib/prismaErrorHandler.js";
 
-const body = z.object({
-	name: z.string(),
-	price: z.number().optional(),
-	type: z.enum(["CLOTHES", "SHOE", "HAT", "PERFUME", "BAG"]),
-	features: z.string(),
+const MongoIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ID");
+
+const paramsSchema = z.object({
+	productId: MongoIdSchema,
 });
 
-type bodyType = z.infer<typeof body>;
-
 export const productsRoute: FastifyPluginAsyncZod = async (app) => {
+	app.setErrorHandler((error: FastifyError, _, reply) => {
+		if (error.validation) {
+			console.log(error);
+
+			reply.status(400).send({
+				error: error.message,
+			});
+		}
+	});
+
+	// get all products
 	app.get(
 		"/",
 		{
@@ -37,13 +41,14 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 				},
 			},
 		},
-		async (req, reply) => {
+		async (_, reply) => {
 			try {
 				const products = await prisma.product.findMany({
 					select: {
 						id: true,
 						data: true,
 						imageUrl: true,
+						imageName: true,
 						isReserved: true,
 						likes: true,
 						name: true,
@@ -53,15 +58,13 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 				});
 
 				reply.status(200).send(products);
-			} catch (prismaError) {
-				console.error(prismaError);
-				reply
-					.status(500)
-					.send({ error: "Unable to criate product. Try again later." });
+			} catch (e) {
+				prismaErrorHandler(reply, e);
 			}
 		},
 	);
 
+	// create a product
 	app.post(
 		"/",
 		{
@@ -132,6 +135,7 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 							await prisma.product.create({
 								data: {
 									data: featuresJson,
+									imageName: fileName,
 									imageUrl: `https://firebasestorage.googleapis.com/v0/b/grand-eva-modas.firebasestorage.app/o/produtos%2F${snapshot.metadata.name}?alt=media`,
 									price: price,
 									type: type,
@@ -141,7 +145,7 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 							return reply
 								.status(200)
 								.send({ message: "Produto criado com sucesso!" });
-						} catch (prismaError) {
+						} catch (_e) {
 							console.error(
 								"Failed to create product. Initializing image rollback",
 							);
@@ -171,7 +175,205 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 		},
 	);
 
+	// delete all products
+	// TODO: REFACTORY
+	// delete all product records
 	app.delete("/", {}, async (req, res) => {
 		await prisma.product.deleteMany({});
 	});
+
+	// delete a single product
+	app.delete(
+		"/:id",
+		{
+			preHandler: [app.authenticate],
+			schema: {
+				tags: ["PRODUCTS"],
+				params: z.object({
+					id: z.string(),
+				}),
+			},
+		},
+		async (req, reply) => {
+			const { id } = req.params;
+
+			const parsedId = z.parse(z.string(), id); //TODO: Verify if is a valid ID
+
+			try {
+				const product = await prisma.product.delete({
+					where: {
+						id: parsedId,
+					},
+					select: {
+						imageName: true,
+					},
+				});
+
+				const imageRef = ref(storage, product.imageName);
+
+				deleteObject(imageRef)
+					.then(() => {
+						return reply.status(200).send();
+					})
+					.catch((error) => {
+						// Uh-oh, an error occurred!
+						console.log(error);
+						return reply
+							.status(500)
+							.send("Um erro ocorreu ao deletar a imagem");
+					});
+			} catch (e) {
+				prismaErrorHandler(reply, e);
+			}
+		},
+	);
+
+	// like a product
+	app.patch(
+		"/:productId/like",
+		{
+			preHandler: [app.authenticate],
+			schema: {
+				params: paramsSchema,
+			},
+		},
+		async (req, reply) => {
+			const { userId } = req.user;
+			const params = paramsSchema.safeParse(req.params);
+
+			// TODO: ADD const isValid = ObjectId.isValid("productId"); (from mongodb package)
+			if (!params.success)
+				return reply.status(400).send({
+					error: params.error,
+				});
+
+			const user = await prisma.user
+				.findUnique({
+					where: {
+						id: userId,
+					},
+					select: {
+						likedProducts: true,
+					},
+				})
+				.catch((prismaError) => {
+					console.log(prismaError);
+					return reply.status(500).send("Unable to find user");
+				});
+
+			if (!user)
+				return reply.status(500).send({ error: "Unable to find user." });
+
+			const isProductAlreadyLiked = user.likedProducts.indexOf(
+				params.data.productId,
+			);
+
+			if (isProductAlreadyLiked !== -1)
+				return reply.status(200).send({ message: "Product already liked" });
+
+			try {
+				//transaction
+				await prisma.$transaction(async (tx) => {
+					await tx.product.update({
+						where: {
+							id: params.data.productId,
+						},
+						data: {
+							likes: {
+								increment: 1,
+							},
+						},
+					});
+
+					await tx.user.update({
+						where: {
+							id: userId,
+						},
+						data: {
+							likedProducts: {
+								push: params.data.productId,
+							},
+						},
+					});
+				});
+
+				return reply.status(200).send();
+			} catch (e) {
+				prismaErrorHandler(reply, e);
+			}
+		},
+	);
+
+	// reserve a product
+	app.patch(
+		"/:productId/reserve",
+		{
+			preHandler: [app.authenticate],
+			schema: {
+				params: paramsSchema,
+			},
+		},
+		async (req, reply) => {
+			const { userId } = req.user;
+			const params = paramsSchema.safeParse(req.params);
+
+			// TODO: ADD const isValid = ObjectId.isValid("productId"); (from mongodb package)
+			if (!params.success)
+				return reply.status(400).send({
+					error: params.error,
+				});
+
+			const user = await prisma.user
+				.findUnique({
+					where: {
+						id: userId,
+					},
+					select: {
+						reservedProducts: true,
+					},
+				})
+				.catch((prismaError) => {
+					console.log(prismaError);
+					return reply.status(500).send("Unable to find user");
+				});
+
+			if (!user)
+				return reply.status(500).send({ error: "Unable to find user." });
+
+			const isProductAlreadyReserved = user.reservedProducts.indexOf(
+				params.data.productId,
+			);
+
+			if (isProductAlreadyReserved !== -1)
+				return reply.status(200).send({ message: "Product already reserved" });
+
+			try {
+				await prisma.product.update({
+					where: {
+						id: params.data.productId,
+					},
+					data: {
+						isReserved: {
+							set: false,
+						},
+					},
+				});
+
+				await prisma.user.update({
+					where: {
+						id: userId,
+					},
+					data: {
+						likedProducts: {
+							push: params.data.productId,
+						},
+					},
+				});
+
+				return reply.status(200).send();
+			} catch (e) {
+				prismaErrorHandler(reply, e);
+			}
+		},
+	);
 };

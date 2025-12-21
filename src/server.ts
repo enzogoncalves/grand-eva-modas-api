@@ -13,6 +13,7 @@ import { productsRoute } from "./routes/products_route.js";
 import { authRoute } from "./routes/auth_route.js";
 import { authPlugin } from "./middlewares/token_verification.js";
 import fastifyMultipart from "@fastify/multipart";
+import fastifyJwt from "@fastify/jwt";
 
 const server = Fastify().withTypeProvider<ZodTypeProvider>();
 
@@ -23,6 +24,8 @@ server.register(fastifyCors, {
 	origin: true,
 	methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
 });
+
+// server.register(fastifyJwt, { secret: env.JWT_SECRET_KEY })
 
 server.register(fastifyMultipart, {
 	// attachFieldsToBody: true

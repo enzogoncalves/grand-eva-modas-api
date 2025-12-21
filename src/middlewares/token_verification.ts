@@ -6,6 +6,8 @@ import type { JWTInvalid } from "jose/errors";
 import { prisma } from "../lib/prisma.js";
 
 export const authPlugin: FastifyPluginAsyncZod = async (app) => {
+	app.decorate("user", null);
+
 	// middleware para verificar se o token do usuário está expirado
 	app.decorate(
 		"token-verification",
@@ -100,7 +102,6 @@ export const authPlugin: FastifyPluginAsyncZod = async (app) => {
 						token: auth_token as string,
 					},
 					select: {
-						token: true,
 						userId: true,
 					},
 				})
@@ -112,6 +113,10 @@ export const authPlugin: FastifyPluginAsyncZod = async (app) => {
 							message: "Token not found",
 						});
 					}
+
+					req.user = {
+						userId: data.userId,
+					};
 				})
 				.catch((e) => {
 					console.log(e);

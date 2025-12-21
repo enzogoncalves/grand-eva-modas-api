@@ -75,9 +75,12 @@ export const UserScalarFieldEnumSchema = z.enum([
 	"name",
 	"email",
 	"password",
+	"role",
 	"created_at",
 	"updated_at",
 	"phoneNumber",
+	"likedProducts",
+	"reservedProducts",
 ]);
 
 export const AuthTokenScalarFieldEnumSchema = z.enum([
@@ -95,6 +98,7 @@ export const ProductScalarFieldEnumSchema = z.enum([
 	"type",
 	"data",
 	"imageUrl",
+	"imageName",
 	"likes",
 	"isReserved",
 ]);
@@ -113,6 +117,10 @@ export const ProductTypeSchema = z.enum([
 
 export type ProductTypeType = `${z.infer<typeof ProductTypeSchema>}`;
 
+export const UserTypeSchema = z.enum(["ADMIN", "USER"]);
+
+export type UserTypeType = `${z.infer<typeof UserTypeSchema>}`;
+
 /////////////////////////////////////////
 // MODELS
 /////////////////////////////////////////
@@ -122,6 +130,7 @@ export type ProductTypeType = `${z.infer<typeof ProductTypeSchema>}`;
 /////////////////////////////////////////
 
 export const UserSchema = z.object({
+	role: UserTypeSchema,
 	id: z.string(),
 	name: z.string(),
 	email: z.string(),
@@ -129,6 +138,8 @@ export const UserSchema = z.object({
 	created_at: z.coerce.date(),
 	updated_at: z.coerce.date().nullable(),
 	phoneNumber: z.string().nullable(),
+	likedProducts: z.string().array(),
+	reservedProducts: z.string().array(),
 });
 
 export type User = z.infer<typeof UserSchema>;
@@ -158,6 +169,7 @@ export const ProductSchema = z.object({
 	price: z.number().nullable(),
 	data: JsonValueSchema,
 	imageUrl: z.string(),
+	imageName: z.string(),
 	likes: z.number().int(),
 	isReserved: z.boolean(),
 });
@@ -188,9 +200,12 @@ export const UserSelectSchema: z.ZodType<Prisma.UserSelect> = z
 		name: z.boolean().optional(),
 		email: z.boolean().optional(),
 		password: z.boolean().optional(),
+		role: z.boolean().optional(),
 		created_at: z.boolean().optional(),
 		updated_at: z.boolean().optional(),
 		phoneNumber: z.boolean().optional(),
+		likedProducts: z.boolean().optional(),
+		reservedProducts: z.boolean().optional(),
 		authToken: z
 			.union([z.boolean(), z.lazy(() => AuthTokenArgsSchema)])
 			.optional(),
@@ -239,6 +254,7 @@ export const ProductSelectSchema: z.ZodType<Prisma.ProductSelect> = z
 		type: z.boolean().optional(),
 		data: z.boolean().optional(),
 		imageUrl: z.boolean().optional(),
+		imageName: z.boolean().optional(),
 		likes: z.boolean().optional(),
 		isReserved: z.boolean().optional(),
 	})
@@ -272,6 +288,12 @@ export const UserWhereInputSchema: z.ZodType<Prisma.UserWhereInput> =
 		password: z
 			.union([z.lazy(() => StringFilterSchema), z.string()])
 			.optional(),
+		role: z
+			.union([
+				z.lazy(() => EnumUserTypeFilterSchema),
+				z.lazy(() => UserTypeSchema),
+			])
+			.optional(),
 		created_at: z
 			.union([z.lazy(() => DateTimeFilterSchema), z.coerce.date()])
 			.optional(),
@@ -283,6 +305,8 @@ export const UserWhereInputSchema: z.ZodType<Prisma.UserWhereInput> =
 			.union([z.lazy(() => StringNullableFilterSchema), z.string()])
 			.optional()
 			.nullable(),
+		likedProducts: z.lazy(() => StringNullableListFilterSchema).optional(),
+		reservedProducts: z.lazy(() => StringNullableListFilterSchema).optional(),
 		authToken: z
 			.union([
 				z.lazy(() => AuthTokenNullableScalarRelationFilterSchema),
@@ -298,9 +322,12 @@ export const UserOrderByWithRelationInputSchema: z.ZodType<Prisma.UserOrderByWit
 		name: z.lazy(() => SortOrderSchema).optional(),
 		email: z.lazy(() => SortOrderSchema).optional(),
 		password: z.lazy(() => SortOrderSchema).optional(),
+		role: z.lazy(() => SortOrderSchema).optional(),
 		created_at: z.lazy(() => SortOrderSchema).optional(),
 		updated_at: z.lazy(() => SortOrderSchema).optional(),
 		phoneNumber: z.lazy(() => SortOrderSchema).optional(),
+		likedProducts: z.lazy(() => SortOrderSchema).optional(),
+		reservedProducts: z.lazy(() => SortOrderSchema).optional(),
 		authToken: z.lazy(() => AuthTokenOrderByWithRelationInputSchema).optional(),
 	});
 
@@ -344,6 +371,12 @@ export const UserWhereUniqueInputSchema: z.ZodType<Prisma.UserWhereUniqueInput> 
 				password: z
 					.union([z.lazy(() => StringFilterSchema), z.string()])
 					.optional(),
+				role: z
+					.union([
+						z.lazy(() => EnumUserTypeFilterSchema),
+						z.lazy(() => UserTypeSchema),
+					])
+					.optional(),
 				created_at: z
 					.union([z.lazy(() => DateTimeFilterSchema), z.coerce.date()])
 					.optional(),
@@ -355,6 +388,10 @@ export const UserWhereUniqueInputSchema: z.ZodType<Prisma.UserWhereUniqueInput> 
 					.union([z.lazy(() => StringNullableFilterSchema), z.string()])
 					.optional()
 					.nullable(),
+				likedProducts: z.lazy(() => StringNullableListFilterSchema).optional(),
+				reservedProducts: z
+					.lazy(() => StringNullableListFilterSchema)
+					.optional(),
 				authToken: z
 					.union([
 						z.lazy(() => AuthTokenNullableScalarRelationFilterSchema),
@@ -371,9 +408,12 @@ export const UserOrderByWithAggregationInputSchema: z.ZodType<Prisma.UserOrderBy
 		name: z.lazy(() => SortOrderSchema).optional(),
 		email: z.lazy(() => SortOrderSchema).optional(),
 		password: z.lazy(() => SortOrderSchema).optional(),
+		role: z.lazy(() => SortOrderSchema).optional(),
 		created_at: z.lazy(() => SortOrderSchema).optional(),
 		updated_at: z.lazy(() => SortOrderSchema).optional(),
 		phoneNumber: z.lazy(() => SortOrderSchema).optional(),
+		likedProducts: z.lazy(() => SortOrderSchema).optional(),
+		reservedProducts: z.lazy(() => SortOrderSchema).optional(),
 		_count: z.lazy(() => UserCountOrderByAggregateInputSchema).optional(),
 		_max: z.lazy(() => UserMaxOrderByAggregateInputSchema).optional(),
 		_min: z.lazy(() => UserMinOrderByAggregateInputSchema).optional(),
@@ -409,6 +449,12 @@ export const UserScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.UserScal
 		password: z
 			.union([z.lazy(() => StringWithAggregatesFilterSchema), z.string()])
 			.optional(),
+		role: z
+			.union([
+				z.lazy(() => EnumUserTypeWithAggregatesFilterSchema),
+				z.lazy(() => UserTypeSchema),
+			])
+			.optional(),
 		created_at: z
 			.union([
 				z.lazy(() => DateTimeWithAggregatesFilterSchema),
@@ -429,6 +475,8 @@ export const UserScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.UserScal
 			])
 			.optional()
 			.nullable(),
+		likedProducts: z.lazy(() => StringNullableListFilterSchema).optional(),
+		reservedProducts: z.lazy(() => StringNullableListFilterSchema).optional(),
 	});
 
 export const AuthTokenWhereInputSchema: z.ZodType<Prisma.AuthTokenWhereInput> =
@@ -629,6 +677,9 @@ export const ProductWhereInputSchema: z.ZodType<Prisma.ProductWhereInput> =
 		imageUrl: z
 			.union([z.lazy(() => StringFilterSchema), z.string()])
 			.optional(),
+		imageName: z
+			.union([z.lazy(() => StringFilterSchema), z.string()])
+			.optional(),
 		likes: z.union([z.lazy(() => IntFilterSchema), z.number()]).optional(),
 		isReserved: z
 			.union([z.lazy(() => BoolFilterSchema), z.boolean()])
@@ -643,6 +694,7 @@ export const ProductOrderByWithRelationInputSchema: z.ZodType<Prisma.ProductOrde
 		type: z.lazy(() => SortOrderSchema).optional(),
 		data: z.lazy(() => SortOrderSchema).optional(),
 		imageUrl: z.lazy(() => SortOrderSchema).optional(),
+		imageName: z.lazy(() => SortOrderSchema).optional(),
 		likes: z.lazy(() => SortOrderSchema).optional(),
 		isReserved: z.lazy(() => SortOrderSchema).optional(),
 	});
@@ -688,6 +740,9 @@ export const ProductWhereUniqueInputSchema: z.ZodType<Prisma.ProductWhereUniqueI
 				imageUrl: z
 					.union([z.lazy(() => StringFilterSchema), z.string()])
 					.optional(),
+				imageName: z
+					.union([z.lazy(() => StringFilterSchema), z.string()])
+					.optional(),
 				likes: z
 					.union([z.lazy(() => IntFilterSchema), z.number().int()])
 					.optional(),
@@ -705,6 +760,7 @@ export const ProductOrderByWithAggregationInputSchema: z.ZodType<Prisma.ProductO
 		type: z.lazy(() => SortOrderSchema).optional(),
 		data: z.lazy(() => SortOrderSchema).optional(),
 		imageUrl: z.lazy(() => SortOrderSchema).optional(),
+		imageName: z.lazy(() => SortOrderSchema).optional(),
 		likes: z.lazy(() => SortOrderSchema).optional(),
 		isReserved: z.lazy(() => SortOrderSchema).optional(),
 		_count: z.lazy(() => ProductCountOrderByAggregateInputSchema).optional(),
@@ -755,6 +811,9 @@ export const ProductScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Produ
 		imageUrl: z
 			.union([z.lazy(() => StringWithAggregatesFilterSchema), z.string()])
 			.optional(),
+		imageName: z
+			.union([z.lazy(() => StringWithAggregatesFilterSchema), z.string()])
+			.optional(),
 		likes: z
 			.union([z.lazy(() => IntWithAggregatesFilterSchema), z.number()])
 			.optional(),
@@ -769,9 +828,22 @@ export const UserCreateInputSchema: z.ZodType<Prisma.UserCreateInput> =
 		name: z.string(),
 		email: z.string(),
 		password: z.string(),
+		role: z.lazy(() => UserTypeSchema).optional(),
 		created_at: z.coerce.date().optional(),
 		updated_at: z.coerce.date().optional().nullable(),
 		phoneNumber: z.string().optional().nullable(),
+		likedProducts: z
+			.union([
+				z.lazy(() => UserCreatelikedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
+		reservedProducts: z
+			.union([
+				z.lazy(() => UserCreatereservedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
 		authToken: z
 			.lazy(() => AuthTokenCreateNestedOneWithoutUserInputSchema)
 			.optional(),
@@ -783,9 +855,22 @@ export const UserUncheckedCreateInputSchema: z.ZodType<Prisma.UserUncheckedCreat
 		name: z.string(),
 		email: z.string(),
 		password: z.string(),
+		role: z.lazy(() => UserTypeSchema).optional(),
 		created_at: z.coerce.date().optional(),
 		updated_at: z.coerce.date().optional().nullable(),
 		phoneNumber: z.string().optional().nullable(),
+		likedProducts: z
+			.union([
+				z.lazy(() => UserCreatelikedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
+		reservedProducts: z
+			.union([
+				z.lazy(() => UserCreatereservedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
 		authToken: z
 			.lazy(() => AuthTokenUncheckedCreateNestedOneWithoutUserInputSchema)
 			.optional(),
@@ -802,6 +887,12 @@ export const UserUpdateInputSchema: z.ZodType<Prisma.UserUpdateInput> =
 		password: z
 			.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputSchema)])
 			.optional(),
+		role: z
+			.union([
+				z.lazy(() => UserTypeSchema),
+				z.lazy(() => EnumUserTypeFieldUpdateOperationsInputSchema),
+			])
+			.optional(),
 		created_at: z
 			.union([
 				z.coerce.date(),
@@ -822,6 +913,18 @@ export const UserUpdateInputSchema: z.ZodType<Prisma.UserUpdateInput> =
 			])
 			.optional()
 			.nullable(),
+		likedProducts: z
+			.union([
+				z.lazy(() => UserUpdatelikedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
+		reservedProducts: z
+			.union([
+				z.lazy(() => UserUpdatereservedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
 		authToken: z
 			.lazy(() => AuthTokenUpdateOneWithoutUserNestedInputSchema)
 			.optional(),
@@ -838,6 +941,12 @@ export const UserUncheckedUpdateInputSchema: z.ZodType<Prisma.UserUncheckedUpdat
 		password: z
 			.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputSchema)])
 			.optional(),
+		role: z
+			.union([
+				z.lazy(() => UserTypeSchema),
+				z.lazy(() => EnumUserTypeFieldUpdateOperationsInputSchema),
+			])
+			.optional(),
 		created_at: z
 			.union([
 				z.coerce.date(),
@@ -858,6 +967,18 @@ export const UserUncheckedUpdateInputSchema: z.ZodType<Prisma.UserUncheckedUpdat
 			])
 			.optional()
 			.nullable(),
+		likedProducts: z
+			.union([
+				z.lazy(() => UserUpdatelikedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
+		reservedProducts: z
+			.union([
+				z.lazy(() => UserUpdatereservedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
 		authToken: z
 			.lazy(() => AuthTokenUncheckedUpdateOneWithoutUserNestedInputSchema)
 			.optional(),
@@ -869,9 +990,22 @@ export const UserCreateManyInputSchema: z.ZodType<Prisma.UserCreateManyInput> =
 		name: z.string(),
 		email: z.string(),
 		password: z.string(),
+		role: z.lazy(() => UserTypeSchema).optional(),
 		created_at: z.coerce.date().optional(),
 		updated_at: z.coerce.date().optional().nullable(),
 		phoneNumber: z.string().optional().nullable(),
+		likedProducts: z
+			.union([
+				z.lazy(() => UserCreatelikedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
+		reservedProducts: z
+			.union([
+				z.lazy(() => UserCreatereservedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
 	});
 
 export const UserUpdateManyMutationInputSchema: z.ZodType<Prisma.UserUpdateManyMutationInput> =
@@ -885,6 +1019,12 @@ export const UserUpdateManyMutationInputSchema: z.ZodType<Prisma.UserUpdateManyM
 		password: z
 			.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputSchema)])
 			.optional(),
+		role: z
+			.union([
+				z.lazy(() => UserTypeSchema),
+				z.lazy(() => EnumUserTypeFieldUpdateOperationsInputSchema),
+			])
+			.optional(),
 		created_at: z
 			.union([
 				z.coerce.date(),
@@ -905,6 +1045,18 @@ export const UserUpdateManyMutationInputSchema: z.ZodType<Prisma.UserUpdateManyM
 			])
 			.optional()
 			.nullable(),
+		likedProducts: z
+			.union([
+				z.lazy(() => UserUpdatelikedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
+		reservedProducts: z
+			.union([
+				z.lazy(() => UserUpdatereservedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
 	});
 
 export const UserUncheckedUpdateManyInputSchema: z.ZodType<Prisma.UserUncheckedUpdateManyInput> =
@@ -918,6 +1070,12 @@ export const UserUncheckedUpdateManyInputSchema: z.ZodType<Prisma.UserUncheckedU
 		password: z
 			.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputSchema)])
 			.optional(),
+		role: z
+			.union([
+				z.lazy(() => UserTypeSchema),
+				z.lazy(() => EnumUserTypeFieldUpdateOperationsInputSchema),
+			])
+			.optional(),
 		created_at: z
 			.union([
 				z.coerce.date(),
@@ -938,6 +1096,18 @@ export const UserUncheckedUpdateManyInputSchema: z.ZodType<Prisma.UserUncheckedU
 			])
 			.optional()
 			.nullable(),
+		likedProducts: z
+			.union([
+				z.lazy(() => UserUpdatelikedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
+		reservedProducts: z
+			.union([
+				z.lazy(() => UserUpdatereservedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
 	});
 
 export const AuthTokenCreateInputSchema: z.ZodType<Prisma.AuthTokenCreateInput> =
@@ -1060,6 +1230,7 @@ export const ProductCreateInputSchema: z.ZodType<Prisma.ProductCreateInput> =
 		type: z.lazy(() => ProductTypeSchema),
 		data: InputJsonValueSchema,
 		imageUrl: z.string(),
+		imageName: z.string(),
 		likes: z.number().int().optional(),
 		isReserved: z.boolean().optional(),
 	});
@@ -1072,6 +1243,7 @@ export const ProductUncheckedCreateInputSchema: z.ZodType<Prisma.ProductUnchecke
 		type: z.lazy(() => ProductTypeSchema),
 		data: InputJsonValueSchema,
 		imageUrl: z.string(),
+		imageName: z.string(),
 		likes: z.number().int().optional(),
 		isReserved: z.boolean().optional(),
 	});
@@ -1096,6 +1268,9 @@ export const ProductUpdateInputSchema: z.ZodType<Prisma.ProductUpdateInput> =
 			.optional(),
 		data: z.union([InputJsonValueSchema, InputJsonValueSchema]).optional(),
 		imageUrl: z
+			.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputSchema)])
+			.optional(),
+		imageName: z
 			.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputSchema)])
 			.optional(),
 		likes: z
@@ -1131,6 +1306,9 @@ export const ProductUncheckedUpdateInputSchema: z.ZodType<Prisma.ProductUnchecke
 		imageUrl: z
 			.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputSchema)])
 			.optional(),
+		imageName: z
+			.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputSchema)])
+			.optional(),
 		likes: z
 			.union([
 				z.number().int(),
@@ -1150,6 +1328,7 @@ export const ProductCreateManyInputSchema: z.ZodType<Prisma.ProductCreateManyInp
 		type: z.lazy(() => ProductTypeSchema),
 		data: InputJsonValueSchema,
 		imageUrl: z.string(),
+		imageName: z.string(),
 		likes: z.number().int().optional(),
 		isReserved: z.boolean().optional(),
 	});
@@ -1174,6 +1353,9 @@ export const ProductUpdateManyMutationInputSchema: z.ZodType<Prisma.ProductUpdat
 			.optional(),
 		data: z.union([InputJsonValueSchema, InputJsonValueSchema]).optional(),
 		imageUrl: z
+			.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputSchema)])
+			.optional(),
+		imageName: z
 			.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputSchema)])
 			.optional(),
 		likes: z
@@ -1209,6 +1391,9 @@ export const ProductUncheckedUpdateManyInputSchema: z.ZodType<Prisma.ProductUnch
 		imageUrl: z
 			.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputSchema)])
 			.optional(),
+		imageName: z
+			.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputSchema)])
+			.optional(),
 		likes: z
 			.union([
 				z.number().int(),
@@ -1235,6 +1420,25 @@ export const StringFilterSchema: z.ZodType<Prisma.StringFilter> =
 		mode: z.lazy(() => QueryModeSchema).optional(),
 		not: z
 			.union([z.string(), z.lazy(() => NestedStringFilterSchema)])
+			.optional(),
+	});
+
+export const EnumUserTypeFilterSchema: z.ZodType<Prisma.EnumUserTypeFilter> =
+	z.strictObject({
+		equals: z.lazy(() => UserTypeSchema).optional(),
+		in: z
+			.lazy(() => UserTypeSchema)
+			.array()
+			.optional(),
+		notIn: z
+			.lazy(() => UserTypeSchema)
+			.array()
+			.optional(),
+		not: z
+			.union([
+				z.lazy(() => UserTypeSchema),
+				z.lazy(() => NestedEnumUserTypeFilterSchema),
+			])
 			.optional(),
 	});
 
@@ -1291,6 +1495,15 @@ export const StringNullableFilterSchema: z.ZodType<Prisma.StringNullableFilter> 
 		isSet: z.boolean().optional(),
 	});
 
+export const StringNullableListFilterSchema: z.ZodType<Prisma.StringNullableListFilter> =
+	z.strictObject({
+		equals: z.string().array().optional().nullable(),
+		has: z.string().optional().nullable(),
+		hasEvery: z.string().array().optional(),
+		hasSome: z.string().array().optional(),
+		isEmpty: z.boolean().optional(),
+	});
+
 export const AuthTokenNullableScalarRelationFilterSchema: z.ZodType<Prisma.AuthTokenNullableScalarRelationFilter> =
 	z.strictObject({
 		is: z
@@ -1309,9 +1522,12 @@ export const UserCountOrderByAggregateInputSchema: z.ZodType<Prisma.UserCountOrd
 		name: z.lazy(() => SortOrderSchema).optional(),
 		email: z.lazy(() => SortOrderSchema).optional(),
 		password: z.lazy(() => SortOrderSchema).optional(),
+		role: z.lazy(() => SortOrderSchema).optional(),
 		created_at: z.lazy(() => SortOrderSchema).optional(),
 		updated_at: z.lazy(() => SortOrderSchema).optional(),
 		phoneNumber: z.lazy(() => SortOrderSchema).optional(),
+		likedProducts: z.lazy(() => SortOrderSchema).optional(),
+		reservedProducts: z.lazy(() => SortOrderSchema).optional(),
 	});
 
 export const UserMaxOrderByAggregateInputSchema: z.ZodType<Prisma.UserMaxOrderByAggregateInput> =
@@ -1320,6 +1536,7 @@ export const UserMaxOrderByAggregateInputSchema: z.ZodType<Prisma.UserMaxOrderBy
 		name: z.lazy(() => SortOrderSchema).optional(),
 		email: z.lazy(() => SortOrderSchema).optional(),
 		password: z.lazy(() => SortOrderSchema).optional(),
+		role: z.lazy(() => SortOrderSchema).optional(),
 		created_at: z.lazy(() => SortOrderSchema).optional(),
 		updated_at: z.lazy(() => SortOrderSchema).optional(),
 		phoneNumber: z.lazy(() => SortOrderSchema).optional(),
@@ -1331,6 +1548,7 @@ export const UserMinOrderByAggregateInputSchema: z.ZodType<Prisma.UserMinOrderBy
 		name: z.lazy(() => SortOrderSchema).optional(),
 		email: z.lazy(() => SortOrderSchema).optional(),
 		password: z.lazy(() => SortOrderSchema).optional(),
+		role: z.lazy(() => SortOrderSchema).optional(),
 		created_at: z.lazy(() => SortOrderSchema).optional(),
 		updated_at: z.lazy(() => SortOrderSchema).optional(),
 		phoneNumber: z.lazy(() => SortOrderSchema).optional(),
@@ -1355,6 +1573,28 @@ export const StringWithAggregatesFilterSchema: z.ZodType<Prisma.StringWithAggreg
 		_count: z.lazy(() => NestedIntFilterSchema).optional(),
 		_min: z.lazy(() => NestedStringFilterSchema).optional(),
 		_max: z.lazy(() => NestedStringFilterSchema).optional(),
+	});
+
+export const EnumUserTypeWithAggregatesFilterSchema: z.ZodType<Prisma.EnumUserTypeWithAggregatesFilter> =
+	z.strictObject({
+		equals: z.lazy(() => UserTypeSchema).optional(),
+		in: z
+			.lazy(() => UserTypeSchema)
+			.array()
+			.optional(),
+		notIn: z
+			.lazy(() => UserTypeSchema)
+			.array()
+			.optional(),
+		not: z
+			.union([
+				z.lazy(() => UserTypeSchema),
+				z.lazy(() => NestedEnumUserTypeWithAggregatesFilterSchema),
+			])
+			.optional(),
+		_count: z.lazy(() => NestedIntFilterSchema).optional(),
+		_min: z.lazy(() => NestedEnumUserTypeFilterSchema).optional(),
+		_max: z.lazy(() => NestedEnumUserTypeFilterSchema).optional(),
 	});
 
 export const DateTimeWithAggregatesFilterSchema: z.ZodType<Prisma.DateTimeWithAggregatesFilter> =
@@ -1522,6 +1762,7 @@ export const ProductCountOrderByAggregateInputSchema: z.ZodType<Prisma.ProductCo
 		type: z.lazy(() => SortOrderSchema).optional(),
 		data: z.lazy(() => SortOrderSchema).optional(),
 		imageUrl: z.lazy(() => SortOrderSchema).optional(),
+		imageName: z.lazy(() => SortOrderSchema).optional(),
 		likes: z.lazy(() => SortOrderSchema).optional(),
 		isReserved: z.lazy(() => SortOrderSchema).optional(),
 	});
@@ -1539,6 +1780,7 @@ export const ProductMaxOrderByAggregateInputSchema: z.ZodType<Prisma.ProductMaxO
 		price: z.lazy(() => SortOrderSchema).optional(),
 		type: z.lazy(() => SortOrderSchema).optional(),
 		imageUrl: z.lazy(() => SortOrderSchema).optional(),
+		imageName: z.lazy(() => SortOrderSchema).optional(),
 		likes: z.lazy(() => SortOrderSchema).optional(),
 		isReserved: z.lazy(() => SortOrderSchema).optional(),
 	});
@@ -1550,6 +1792,7 @@ export const ProductMinOrderByAggregateInputSchema: z.ZodType<Prisma.ProductMinO
 		price: z.lazy(() => SortOrderSchema).optional(),
 		type: z.lazy(() => SortOrderSchema).optional(),
 		imageUrl: z.lazy(() => SortOrderSchema).optional(),
+		imageName: z.lazy(() => SortOrderSchema).optional(),
 		likes: z.lazy(() => SortOrderSchema).optional(),
 		isReserved: z.lazy(() => SortOrderSchema).optional(),
 	});
@@ -1645,6 +1888,16 @@ export const BoolWithAggregatesFilterSchema: z.ZodType<Prisma.BoolWithAggregates
 		_max: z.lazy(() => NestedBoolFilterSchema).optional(),
 	});
 
+export const UserCreatelikedProductsInputSchema: z.ZodType<Prisma.UserCreatelikedProductsInput> =
+	z.strictObject({
+		set: z.string().array(),
+	});
+
+export const UserCreatereservedProductsInputSchema: z.ZodType<Prisma.UserCreatereservedProductsInput> =
+	z.strictObject({
+		set: z.string().array(),
+	});
+
 export const AuthTokenCreateNestedOneWithoutUserInputSchema: z.ZodType<Prisma.AuthTokenCreateNestedOneWithoutUserInput> =
 	z.strictObject({
 		create: z
@@ -1678,6 +1931,11 @@ export const StringFieldUpdateOperationsInputSchema: z.ZodType<Prisma.StringFiel
 		set: z.string().optional(),
 	});
 
+export const EnumUserTypeFieldUpdateOperationsInputSchema: z.ZodType<Prisma.EnumUserTypeFieldUpdateOperationsInput> =
+	z.strictObject({
+		set: z.lazy(() => UserTypeSchema).optional(),
+	});
+
 export const DateTimeFieldUpdateOperationsInputSchema: z.ZodType<Prisma.DateTimeFieldUpdateOperationsInput> =
 	z.strictObject({
 		set: z.coerce.date().optional(),
@@ -1693,6 +1951,18 @@ export const NullableStringFieldUpdateOperationsInputSchema: z.ZodType<Prisma.Nu
 	z.strictObject({
 		set: z.string().optional().nullable(),
 		unset: z.boolean().optional(),
+	});
+
+export const UserUpdatelikedProductsInputSchema: z.ZodType<Prisma.UserUpdatelikedProductsInput> =
+	z.strictObject({
+		set: z.string().array().optional(),
+		push: z.union([z.string(), z.string().array()]).optional(),
+	});
+
+export const UserUpdatereservedProductsInputSchema: z.ZodType<Prisma.UserUpdatereservedProductsInput> =
+	z.strictObject({
+		set: z.string().array().optional(),
+		push: z.union([z.string(), z.string().array()]).optional(),
 	});
 
 export const AuthTokenUpdateOneWithoutUserNestedInputSchema: z.ZodType<Prisma.AuthTokenUpdateOneWithoutUserNestedInput> =
@@ -1833,6 +2103,25 @@ export const NestedStringFilterSchema: z.ZodType<Prisma.NestedStringFilter> =
 			.optional(),
 	});
 
+export const NestedEnumUserTypeFilterSchema: z.ZodType<Prisma.NestedEnumUserTypeFilter> =
+	z.strictObject({
+		equals: z.lazy(() => UserTypeSchema).optional(),
+		in: z
+			.lazy(() => UserTypeSchema)
+			.array()
+			.optional(),
+		notIn: z
+			.lazy(() => UserTypeSchema)
+			.array()
+			.optional(),
+		not: z
+			.union([
+				z.lazy(() => UserTypeSchema),
+				z.lazy(() => NestedEnumUserTypeFilterSchema),
+			])
+			.optional(),
+	});
+
 export const NestedDateTimeFilterSchema: z.ZodType<Prisma.NestedDateTimeFilter> =
 	z.strictObject({
 		equals: z.coerce.date().optional(),
@@ -1915,6 +2204,28 @@ export const NestedIntFilterSchema: z.ZodType<Prisma.NestedIntFilter> =
 		gt: z.number().optional(),
 		gte: z.number().optional(),
 		not: z.union([z.number(), z.lazy(() => NestedIntFilterSchema)]).optional(),
+	});
+
+export const NestedEnumUserTypeWithAggregatesFilterSchema: z.ZodType<Prisma.NestedEnumUserTypeWithAggregatesFilter> =
+	z.strictObject({
+		equals: z.lazy(() => UserTypeSchema).optional(),
+		in: z
+			.lazy(() => UserTypeSchema)
+			.array()
+			.optional(),
+		notIn: z
+			.lazy(() => UserTypeSchema)
+			.array()
+			.optional(),
+		not: z
+			.union([
+				z.lazy(() => UserTypeSchema),
+				z.lazy(() => NestedEnumUserTypeWithAggregatesFilterSchema),
+			])
+			.optional(),
+		_count: z.lazy(() => NestedIntFilterSchema).optional(),
+		_min: z.lazy(() => NestedEnumUserTypeFilterSchema).optional(),
+		_max: z.lazy(() => NestedEnumUserTypeFilterSchema).optional(),
 	});
 
 export const NestedDateTimeWithAggregatesFilterSchema: z.ZodType<Prisma.NestedDateTimeWithAggregatesFilter> =
@@ -2230,9 +2541,22 @@ export const UserCreateWithoutAuthTokenInputSchema: z.ZodType<Prisma.UserCreateW
 		name: z.string(),
 		email: z.string(),
 		password: z.string(),
+		role: z.lazy(() => UserTypeSchema).optional(),
 		created_at: z.coerce.date().optional(),
 		updated_at: z.coerce.date().optional().nullable(),
 		phoneNumber: z.string().optional().nullable(),
+		likedProducts: z
+			.union([
+				z.lazy(() => UserCreatelikedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
+		reservedProducts: z
+			.union([
+				z.lazy(() => UserCreatereservedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
 	});
 
 export const UserUncheckedCreateWithoutAuthTokenInputSchema: z.ZodType<Prisma.UserUncheckedCreateWithoutAuthTokenInput> =
@@ -2241,9 +2565,22 @@ export const UserUncheckedCreateWithoutAuthTokenInputSchema: z.ZodType<Prisma.Us
 		name: z.string(),
 		email: z.string(),
 		password: z.string(),
+		role: z.lazy(() => UserTypeSchema).optional(),
 		created_at: z.coerce.date().optional(),
 		updated_at: z.coerce.date().optional().nullable(),
 		phoneNumber: z.string().optional().nullable(),
+		likedProducts: z
+			.union([
+				z.lazy(() => UserCreatelikedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
+		reservedProducts: z
+			.union([
+				z.lazy(() => UserCreatereservedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
 	});
 
 export const UserCreateOrConnectWithoutAuthTokenInputSchema: z.ZodType<Prisma.UserCreateOrConnectWithoutAuthTokenInput> =
@@ -2288,6 +2625,12 @@ export const UserUpdateWithoutAuthTokenInputSchema: z.ZodType<Prisma.UserUpdateW
 		password: z
 			.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputSchema)])
 			.optional(),
+		role: z
+			.union([
+				z.lazy(() => UserTypeSchema),
+				z.lazy(() => EnumUserTypeFieldUpdateOperationsInputSchema),
+			])
+			.optional(),
 		created_at: z
 			.union([
 				z.coerce.date(),
@@ -2308,6 +2651,18 @@ export const UserUpdateWithoutAuthTokenInputSchema: z.ZodType<Prisma.UserUpdateW
 			])
 			.optional()
 			.nullable(),
+		likedProducts: z
+			.union([
+				z.lazy(() => UserUpdatelikedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
+		reservedProducts: z
+			.union([
+				z.lazy(() => UserUpdatereservedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
 	});
 
 export const UserUncheckedUpdateWithoutAuthTokenInputSchema: z.ZodType<Prisma.UserUncheckedUpdateWithoutAuthTokenInput> =
@@ -2321,6 +2676,12 @@ export const UserUncheckedUpdateWithoutAuthTokenInputSchema: z.ZodType<Prisma.Us
 		password: z
 			.union([z.string(), z.lazy(() => StringFieldUpdateOperationsInputSchema)])
 			.optional(),
+		role: z
+			.union([
+				z.lazy(() => UserTypeSchema),
+				z.lazy(() => EnumUserTypeFieldUpdateOperationsInputSchema),
+			])
+			.optional(),
 		created_at: z
 			.union([
 				z.coerce.date(),
@@ -2341,6 +2702,18 @@ export const UserUncheckedUpdateWithoutAuthTokenInputSchema: z.ZodType<Prisma.Us
 			])
 			.optional()
 			.nullable(),
+		likedProducts: z
+			.union([
+				z.lazy(() => UserUpdatelikedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
+		reservedProducts: z
+			.union([
+				z.lazy(() => UserUpdatereservedProductsInputSchema),
+				z.string().array(),
+			])
+			.optional(),
 	});
 
 /////////////////////////////////////////

@@ -17,3 +17,10 @@ export const ProductType = {
 } as const;
 
 export type ProductType = (typeof ProductType)[keyof typeof ProductType];
+
+export const UserType = {
+	ADMIN: "ADMIN",
+	USER: "USER",
+} as const;
+
+export type UserType = (typeof UserType)[keyof typeof UserType];

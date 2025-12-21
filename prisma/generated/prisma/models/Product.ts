@@ -42,6 +42,7 @@ export type ProductMinAggregateOutputType = {
 	price: number | null;
 	type: $Enums.ProductType | null;
 	imageUrl: string | null;
+	imageName: string | null;
 	likes: number | null;
 	isReserved: boolean | null;
 };
@@ -52,6 +53,7 @@ export type ProductMaxAggregateOutputType = {
 	price: number | null;
 	type: $Enums.ProductType | null;
 	imageUrl: string | null;
+	imageName: string | null;
 	likes: number | null;
 	isReserved: boolean | null;
 };
@@ -63,6 +65,7 @@ export type ProductCountAggregateOutputType = {
 	type: number;
 	data: number;
 	imageUrl: number;
+	imageName: number;
 	likes: number;
 	isReserved: number;
 	_all: number;
@@ -84,6 +87,7 @@ export type ProductMinAggregateInputType = {
 	price?: true;
 	type?: true;
 	imageUrl?: true;
+	imageName?: true;
 	likes?: true;
 	isReserved?: true;
 };
@@ -94,6 +98,7 @@ export type ProductMaxAggregateInputType = {
 	price?: true;
 	type?: true;
 	imageUrl?: true;
+	imageName?: true;
 	likes?: true;
 	isReserved?: true;
 };
@@ -105,6 +110,7 @@ export type ProductCountAggregateInputType = {
 	type?: true;
 	data?: true;
 	imageUrl?: true;
+	imageName?: true;
 	likes?: true;
 	isReserved?: true;
 	_all?: true;
@@ -210,6 +216,7 @@ export type ProductGroupByOutputType = {
 	type: $Enums.ProductType;
 	data: runtime.JsonValue;
 	imageUrl: string;
+	imageName: string;
 	likes: number;
 	isReserved: boolean;
 	_count: ProductCountAggregateOutputType | null;
@@ -242,6 +249,7 @@ export type ProductWhereInput = {
 	type?: Prisma.EnumProductTypeFilter<"Product"> | $Enums.ProductType;
 	data?: Prisma.JsonFilter<"Product">;
 	imageUrl?: Prisma.StringFilter<"Product"> | string;
+	imageName?: Prisma.StringFilter<"Product"> | string;
 	likes?: Prisma.IntFilter<"Product"> | number;
 	isReserved?: Prisma.BoolFilter<"Product"> | boolean;
 };
@@ -253,6 +261,7 @@ export type ProductOrderByWithRelationInput = {
 	type?: Prisma.SortOrder;
 	data?: Prisma.SortOrder;
 	imageUrl?: Prisma.SortOrder;
+	imageName?: Prisma.SortOrder;
 	likes?: Prisma.SortOrder;
 	isReserved?: Prisma.SortOrder;
 };
@@ -268,6 +277,7 @@ export type ProductWhereUniqueInput = Prisma.AtLeast<
 		type?: Prisma.EnumProductTypeFilter<"Product"> | $Enums.ProductType;
 		data?: Prisma.JsonFilter<"Product">;
 		imageUrl?: Prisma.StringFilter<"Product"> | string;
+		imageName?: Prisma.StringFilter<"Product"> | string;
 		likes?: Prisma.IntFilter<"Product"> | number;
 		isReserved?: Prisma.BoolFilter<"Product"> | boolean;
 	},
@@ -281,6 +291,7 @@ export type ProductOrderByWithAggregationInput = {
 	type?: Prisma.SortOrder;
 	data?: Prisma.SortOrder;
 	imageUrl?: Prisma.SortOrder;
+	imageName?: Prisma.SortOrder;
 	likes?: Prisma.SortOrder;
 	isReserved?: Prisma.SortOrder;
 	_count?: Prisma.ProductCountOrderByAggregateInput;
@@ -306,6 +317,7 @@ export type ProductScalarWhereWithAggregatesInput = {
 		| $Enums.ProductType;
 	data?: Prisma.JsonWithAggregatesFilter<"Product">;
 	imageUrl?: Prisma.StringWithAggregatesFilter<"Product"> | string;
+	imageName?: Prisma.StringWithAggregatesFilter<"Product"> | string;
 	likes?: Prisma.IntWithAggregatesFilter<"Product"> | number;
 	isReserved?: Prisma.BoolWithAggregatesFilter<"Product"> | boolean;
 };
@@ -317,6 +329,7 @@ export type ProductCreateInput = {
 	type: $Enums.ProductType;
 	data: runtime.InputJsonValue;
 	imageUrl: string;
+	imageName: string;
 	likes?: number;
 	isReserved?: boolean;
 };
@@ -328,6 +341,7 @@ export type ProductUncheckedCreateInput = {
 	type: $Enums.ProductType;
 	data: runtime.InputJsonValue;
 	imageUrl: string;
+	imageName: string;
 	likes?: number;
 	isReserved?: boolean;
 };
@@ -338,6 +352,7 @@ export type ProductUpdateInput = {
 	type?: Prisma.EnumProductTypeFieldUpdateOperationsInput | $Enums.ProductType;
 	data?: runtime.InputJsonValue | runtime.InputJsonValue;
 	imageUrl?: Prisma.StringFieldUpdateOperationsInput | string;
+	imageName?: Prisma.StringFieldUpdateOperationsInput | string;
 	likes?: Prisma.IntFieldUpdateOperationsInput | number;
 	isReserved?: Prisma.BoolFieldUpdateOperationsInput | boolean;
 };
@@ -348,6 +363,7 @@ export type ProductUncheckedUpdateInput = {
 	type?: Prisma.EnumProductTypeFieldUpdateOperationsInput | $Enums.ProductType;
 	data?: runtime.InputJsonValue | runtime.InputJsonValue;
 	imageUrl?: Prisma.StringFieldUpdateOperationsInput | string;
+	imageName?: Prisma.StringFieldUpdateOperationsInput | string;
 	likes?: Prisma.IntFieldUpdateOperationsInput | number;
 	isReserved?: Prisma.BoolFieldUpdateOperationsInput | boolean;
 };
@@ -359,6 +375,7 @@ export type ProductCreateManyInput = {
 	type: $Enums.ProductType;
 	data: runtime.InputJsonValue;
 	imageUrl: string;
+	imageName: string;
 	likes?: number;
 	isReserved?: boolean;
 };
@@ -369,6 +386,7 @@ export type ProductUpdateManyMutationInput = {
 	type?: Prisma.EnumProductTypeFieldUpdateOperationsInput | $Enums.ProductType;
 	data?: runtime.InputJsonValue | runtime.InputJsonValue;
 	imageUrl?: Prisma.StringFieldUpdateOperationsInput | string;
+	imageName?: Prisma.StringFieldUpdateOperationsInput | string;
 	likes?: Prisma.IntFieldUpdateOperationsInput | number;
 	isReserved?: Prisma.BoolFieldUpdateOperationsInput | boolean;
 };
@@ -379,6 +397,7 @@ export type ProductUncheckedUpdateManyInput = {
 	type?: Prisma.EnumProductTypeFieldUpdateOperationsInput | $Enums.ProductType;
 	data?: runtime.InputJsonValue | runtime.InputJsonValue;
 	imageUrl?: Prisma.StringFieldUpdateOperationsInput | string;
+	imageName?: Prisma.StringFieldUpdateOperationsInput | string;
 	likes?: Prisma.IntFieldUpdateOperationsInput | number;
 	isReserved?: Prisma.BoolFieldUpdateOperationsInput | boolean;
 };
@@ -390,6 +409,7 @@ export type ProductCountOrderByAggregateInput = {
 	type?: Prisma.SortOrder;
 	data?: Prisma.SortOrder;
 	imageUrl?: Prisma.SortOrder;
+	imageName?: Prisma.SortOrder;
 	likes?: Prisma.SortOrder;
 	isReserved?: Prisma.SortOrder;
 };
@@ -405,6 +425,7 @@ export type ProductMaxOrderByAggregateInput = {
 	price?: Prisma.SortOrder;
 	type?: Prisma.SortOrder;
 	imageUrl?: Prisma.SortOrder;
+	imageName?: Prisma.SortOrder;
 	likes?: Prisma.SortOrder;
 	isReserved?: Prisma.SortOrder;
 };
@@ -415,6 +436,7 @@ export type ProductMinOrderByAggregateInput = {
 	price?: Prisma.SortOrder;
 	type?: Prisma.SortOrder;
 	imageUrl?: Prisma.SortOrder;
+	imageName?: Prisma.SortOrder;
 	likes?: Prisma.SortOrder;
 	isReserved?: Prisma.SortOrder;
 };
@@ -460,6 +482,7 @@ export type ProductSelect<
 		type?: boolean;
 		data?: boolean;
 		imageUrl?: boolean;
+		imageName?: boolean;
 		likes?: boolean;
 		isReserved?: boolean;
 	},
@@ -473,6 +496,7 @@ export type ProductSelectScalar = {
 	type?: boolean;
 	data?: boolean;
 	imageUrl?: boolean;
+	imageName?: boolean;
 	likes?: boolean;
 	isReserved?: boolean;
 };
@@ -487,6 +511,7 @@ export type ProductOmit<
 	| "type"
 	| "data"
 	| "imageUrl"
+	| "imageName"
 	| "likes"
 	| "isReserved",
 	ExtArgs["result"]["product"]
@@ -506,6 +531,7 @@ export type $ProductPayload<
 			type: $Enums.ProductType;
 			data: runtime.JsonValue;
 			imageUrl: string;
+			imageName: string;
 			likes: number;
 			isReserved: boolean;
 		},
@@ -1061,6 +1087,7 @@ export interface ProductFieldRefs {
 	readonly type: Prisma.FieldRef<"Product", "ProductType">;
 	readonly data: Prisma.FieldRef<"Product", "Json">;
 	readonly imageUrl: Prisma.FieldRef<"Product", "String">;
+	readonly imageName: Prisma.FieldRef<"Product", "String">;
 	readonly likes: Prisma.FieldRef<"Product", "Int">;
 	readonly isReserved: Prisma.FieldRef<"Product", "Boolean">;
 }

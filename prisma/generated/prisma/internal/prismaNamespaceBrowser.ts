@@ -68,9 +68,12 @@ export const UserScalarFieldEnum = {
 	name: "name",
 	email: "email",
 	password: "password",
+	role: "role",
 	created_at: "created_at",
 	updated_at: "updated_at",
 	phoneNumber: "phoneNumber",
+	likedProducts: "likedProducts",
+	reservedProducts: "reservedProducts",
 } as const;
 
 export type UserScalarFieldEnum =
@@ -94,6 +97,7 @@ export const ProductScalarFieldEnum = {
 	type: "type",
 	data: "data",
 	imageUrl: "imageUrl",
+	imageName: "imageName",
 	likes: "likes",
 	isReserved: "isReserved",
 } as const;
