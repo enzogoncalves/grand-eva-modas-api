@@ -7,6 +7,7 @@ import { ProductSchema } from "../../prisma/generated/zod/index.js";
 import { storage } from "../lib/firebase.js";
 import { prisma } from "../lib/prisma.js";
 import { prismaErrorHandler } from "../lib/prismaErrorHandler.js";
+import { PrismaClientKnownRequestError } from "../../prisma/generated/prisma/internal/prismaNamespace.js";
 
 const MongoIdSchema = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ID");
 
@@ -17,8 +18,6 @@ const paramsSchema = z.object({
 export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 	app.setErrorHandler((error: FastifyError, _, reply) => {
 		if (error.validation) {
-			console.log(error);
-
 			reply.status(400).send({
 				error: error.message,
 			});
@@ -216,8 +215,6 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 						return reply.status(200).send();
 					})
 					.catch((error) => {
-						// Uh-oh, an error occurred!
-						console.log(error);
 						return reply
 							.status(500)
 							.send("Um erro ocorreu ao deletar a imagem");
@@ -247,33 +244,28 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 					error: params.error,
 				});
 
-			const user = await prisma.user
-				.findUnique({
-					where: {
-						id: userId,
-					},
-					select: {
-						likedProducts: true,
-					},
-				})
-				.catch((prismaError) => {
-					console.log(prismaError);
-					return reply.status(500).send("Unable to find user");
-				});
-
-			if (!user)
-				return reply.status(500).send({ error: "Unable to find user." });
-
-			const isProductAlreadyLiked = user.likedProducts.indexOf(
-				params.data.productId,
-			);
-
-			if (isProductAlreadyLiked !== -1)
-				return reply.status(200).send({ message: "Product already liked" });
-
 			try {
 				//transaction
 				await prisma.$transaction(async (tx) => {
+					const user = await tx.user.findUnique({
+						where: {
+							id: userId,
+						},
+						select: {
+							likedProducts: true,
+						},
+					});
+
+					if (!user)
+						return reply.status(500).send({ error: "Unable to find user." });
+
+					const isProductAlreadyLiked = user.likedProducts.includes(
+						params.data.productId,
+					);
+
+					if (isProductAlreadyLiked)
+						return reply.status(409).send({ message: "Product already liked" });
+
 					await tx.product.update({
 						where: {
 							id: params.data.productId,
@@ -324,56 +316,39 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 				});
 
 			try {
-				await prisma.$transaction(async (tx) => {
-					const user = await tx.user
-						.findUnique({
-							where: {
-								id: userId,
-							},
-							select: {
-								reservedProducts: true,
-							},
-						})
-						.catch((prismaError) => {
-							console.log(prismaError);
-							return reply.status(500).send("Unable to find user");
-						});
+				const result = await prisma.$transaction(async (tx) => {
+					const user = await tx.user.findUnique({
+						where: {
+							id: userId,
+						},
+						select: {
+							reservedProducts: true,
+						},
+					});
 
-					if (!user)
-						return reply.status(500).send({ error: "Unable to find user." });
+					const product = await tx.product.findUnique({
+						where: {
+							id: params.data.productId,
+						},
+						select: {
+							isReserved: true,
+						},
+					});
 
-					const product = await tx.product
-						.findUnique({
-							where: {
-								id: params.data.productId,
-							},
-							select: {
-								isReserved: true,
-							},
-						})
-						.catch((prismaError) => {
-							console.log(prismaError);
-							return reply
-								.status(500)
-								.send({ error: "Unable to find product" });
-						});
+					if (!user || !product) {
+						throw new Error("This is a different error! NOT_FOUND");
+					}
 
-					if (!product)
-						return reply.status(500).send({ error: "Unable to find product." });
+					const isProductAlreadyReserved = user.reservedProducts.includes(
+						params.data.productId,
+					);
 
-					const isProductAlreadyReserved =
-						user.reservedProducts.indexOf(params.data.productId) !== -1 ||
-						product.isReserved;
+					if (isProductAlreadyReserved) {
+						return reply
+							.status(409)
+							.send({ message: "Product already reserved" });
+					}
 
-					if (isProductAlreadyReserved)
-						return reply.status(200).send({ message: "Product already reserved 2" });
-				});
-			} catch (e) {
-				prismaErrorHandler(reply, e);
-			}
-
-			try {
-				await prisma.$transaction(async (tx) => {
 					await tx.product.update({
 						where: {
 							id: params.data.productId,
@@ -396,8 +371,12 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 				});
 
 				return reply.status(200).send();
-			} catch (e) {
-				prismaErrorHandler(reply, e);
+			} catch (e: any) {
+				if (e.message === "NOT_FOUND") {
+					return reply.status(404).send({ error: "User or Product not found" });
+				}
+
+				return prismaErrorHandler(reply, e);
 			}
 		},
 	);
