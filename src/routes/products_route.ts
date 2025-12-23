@@ -63,6 +63,62 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 		},
 	);
 
+	app.get(
+		"/:productId",
+		{
+			preHandler: [app.authenticate],
+			schema: {
+				tags: ["PRODUCTS"],
+				summary: "get a single product",
+				params: paramsSchema,
+				response: {
+					200: ProductSchema,
+				},
+			},
+		},
+		async (req, reply) => {
+			const params = paramsSchema.safeParse(req.params);
+			const parsedId = z.parse(z.string(), params.data?.productId);
+
+			try {
+				const product = await prisma.product.findUnique({
+					where: {
+						id: parsedId,
+					},
+					select: {
+						id: true,
+						data: true,
+						imageUrl: true,
+						imageName: true,
+						isReserved: true,
+						likes: true,
+						name: true,
+						price: true,
+						type: true,
+					},
+				});
+
+				if (!product) {
+					throw new PrismaClientKnownRequestError(
+						"PrismaClientKnownRequestError",
+						{
+							code: "P2025",
+							clientVersion: "6.19.0",
+							meta: {
+								cause: "No product was found.",
+								modelName: "Product",
+							},
+						},
+					);
+				}
+
+				reply.status(200).send(product);
+			} catch (e) {
+				prismaErrorHandler(reply, e);
+			}
+		},
+	);
+
 	// create a product
 	app.post(
 		"/",
@@ -177,26 +233,35 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 	// delete all products
 	// TODO: REFACTORY
 	// delete all product records
-	app.delete("/", {}, async (req, res) => {
-		await prisma.product.deleteMany({});
-	});
+	app.delete(
+		"/",
+		{
+			schema: {
+				tags: ["PRODUCTS"],
+				summary: "delete all products",
+			},
+		},
+		async (req, res) => {
+			await prisma.product.deleteMany({});
+			//TODO: delete the storage as well
+		},
+	);
 
 	// delete a single product
 	app.delete(
-		"/:id",
+		"/:productId",
 		{
 			preHandler: [app.authenticate],
 			schema: {
 				tags: ["PRODUCTS"],
-				params: z.object({
-					id: z.string(),
-				}),
+				summary: "delete a single project",
+				params: paramsSchema,
 			},
 		},
 		async (req, reply) => {
-			const { id } = req.params;
+			const params = paramsSchema.safeParse(req.params);
 
-			const parsedId = z.parse(z.string(), id); //TODO: Verify if is a valid ID
+			const parsedId = z.parse(z.string(), params.data?.productId); //TODO: Verify if is a valid ID
 
 			try {
 				const product = await prisma.product.delete({
@@ -231,12 +296,16 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 		{
 			preHandler: [app.authenticate],
 			schema: {
+				tags: ["PRODUCTS"],
+				summary: "liking a project",
 				params: paramsSchema,
 			},
 		},
 		async (req, reply) => {
 			const { userId } = req.user;
 			const params = paramsSchema.safeParse(req.params);
+
+			const parsedId = z.parse(z.string(), params.data?.productId);
 
 			// TODO: ADD const isValid = ObjectId.isValid("productId"); (from mongodb package)
 			if (!params.success)
@@ -259,16 +328,14 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 					if (!user)
 						return reply.status(500).send({ error: "Unable to find user." });
 
-					const isProductAlreadyLiked = user.likedProducts.includes(
-						params.data.productId,
-					);
+					const isProductAlreadyLiked = user.likedProducts.includes(parsedId);
 
 					if (isProductAlreadyLiked)
 						return reply.status(409).send({ message: "Product already liked" });
 
 					await tx.product.update({
 						where: {
-							id: params.data.productId,
+							id: parsedId,
 						},
 						data: {
 							likes: {
@@ -283,8 +350,85 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 						},
 						data: {
 							likedProducts: {
-								push: params.data.productId,
+								push: parsedId,
 							},
+						},
+					});
+				});
+
+				return reply.status(200).send();
+			} catch (e) {
+				prismaErrorHandler(reply, e);
+			}
+		},
+	);
+
+	// dislike a product
+	app.patch(
+		"/:productId/dislike",
+		{
+			preHandler: [app.authenticate],
+			schema: {
+				tags: ["PRODUCTS"],
+				summary: "disliking a project",
+				params: paramsSchema,
+			},
+		},
+		async (req, reply) => {
+			const { userId } = req.user;
+			const params = paramsSchema.safeParse(req.params);
+
+			const parsedId = z.parse(z.string(), params.data?.productId);
+
+			// TODO: ADD const isValid = ObjectId.isValid("productId"); (from mongodb package)
+			if (!params.success)
+				return reply.status(400).send({
+					error: params.error,
+				});
+
+			try {
+				//transaction
+				await prisma.$transaction(async (tx) => {
+					const user = await tx.user.findUnique({
+						where: {
+							id: userId,
+						},
+						select: {
+							likedProducts: true,
+						},
+					});
+
+					if (!user)
+						return reply.status(500).send({ error: "Unable to find user." });
+
+					const isProductAlreadyLiked = user.likedProducts.includes(parsedId);
+
+					if (!isProductAlreadyLiked)
+						return reply
+							.status(409)
+							.send({ message: "Product already disliked" });
+
+					await tx.product.update({
+						where: {
+							id: parsedId,
+						},
+						data: {
+							likes: {
+								decrement: 1,
+							},
+						},
+					});
+
+					const likedProductsWithoutDislikedOne = user.likedProducts.filter(
+						(value) => value !== params.data.productId,
+					);
+
+					await tx.user.update({
+						where: {
+							id: userId,
+						},
+						data: {
+							likedProducts: likedProductsWithoutDislikedOne,
 						},
 					});
 				});
@@ -302,12 +446,16 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 		{
 			preHandler: [app.authenticate],
 			schema: {
+				tags: ["PRODUCTS"],
+				summary: "reserve a product",
 				params: paramsSchema,
 			},
 		},
 		async (req, reply) => {
 			const { userId } = req.user;
 			const params = paramsSchema.safeParse(req.params);
+
+			const parsedId = z.parse(z.string(), params.data?.productId);
 
 			// TODO: ADD const isValid = ObjectId.isValid("productId"); (from mongodb package)
 			if (!params.success)
@@ -328,7 +476,7 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 
 					const product = await tx.product.findUnique({
 						where: {
-							id: params.data.productId,
+							id: parsedId,
 						},
 						select: {
 							isReserved: true,
@@ -336,12 +484,21 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 					});
 
 					if (!user || !product) {
-						throw new Error("This is a different error! NOT_FOUND");
+						throw new PrismaClientKnownRequestError(
+							"PrismaClientKnownRequestError",
+							{
+								code: "P2025",
+								clientVersion: "6.19.0",
+								meta: {
+									cause: "No product or user was found with those id's",
+									modelName: "User or Product",
+								},
+							},
+						);
 					}
 
-					const isProductAlreadyReserved = user.reservedProducts.includes(
-						params.data.productId,
-					);
+					const isProductAlreadyReserved =
+						user.reservedProducts.includes(parsedId);
 
 					if (isProductAlreadyReserved) {
 						return reply
@@ -351,7 +508,7 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 
 					await tx.product.update({
 						where: {
-							id: params.data.productId,
+							id: parsedId,
 						},
 						data: {
 							isReserved: true,
@@ -364,7 +521,7 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 						},
 						data: {
 							reservedProducts: {
-								push: params.data.productId,
+								push: parsedId,
 							},
 						},
 					});
@@ -372,10 +529,6 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 
 				return reply.status(200).send();
 			} catch (e: any) {
-				if (e.message === "NOT_FOUND") {
-					return reply.status(404).send({ error: "User or Product not found" });
-				}
-
 				return prismaErrorHandler(reply, e);
 			}
 		},

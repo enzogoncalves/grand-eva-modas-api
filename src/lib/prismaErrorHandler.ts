@@ -7,6 +7,7 @@ export function prismaErrorHandler(reply: FastifyReply, error: any) {
 
 		// P2025: "An operation failed because it depends on one or more records that were required but not found."
 		if (error.code === "P2025") {
+			console.log(error.clientVersion);
 			return reply.status(500).send({
 				code: error.code,
 				error: error.name,

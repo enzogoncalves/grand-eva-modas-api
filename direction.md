@@ -24,3 +24,5 @@ TOKEN -> verificar se existe um token válido
 
 TODO: configure biome
 
+TODO: Schema of response for every route
+TODO: .env para versão do prisma nas chamadas manuais de errors
