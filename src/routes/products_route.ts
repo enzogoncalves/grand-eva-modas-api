@@ -16,22 +16,23 @@ const paramsSchema = z.object({
 });
 
 export const productsRoute: FastifyPluginAsyncZod = async (app) => {
-	app.setErrorHandler((error: FastifyError, _, reply) => {
-		if (error.validation) {
-			reply.status(400).send({
-				error: error.message,
-			});
-		}
-	});
+	// app.setErrorHandler((error: FastifyError, _, reply) => {
+	// 	if (error.validation) {
+	// 		reply.status(400).send({
+	// 			error: error.message,
+	// 		});
+	// 	}
+	// });
 
 	// get all products
 	app.get(
 		"/",
 		{
-			preHandler: [app.authenticate],
+			// preHandler: [app.authenticate],
 			schema: {
 				tags: ["PRODUCTS"],
 				summary: "get products",
+				params: paramsSchema,
 				response: {
 					200: ProductSchema.array(),
 					500: z.object({
@@ -66,11 +67,12 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 	app.get(
 		"/:productId",
 		{
-			preHandler: [app.authenticate],
 			schema: {
 				tags: ["PRODUCTS"],
 				summary: "get a single product",
-				params: paramsSchema,
+				params: z.object({
+					productId: z.string()
+				}),
 				response: {
 					200: ProductSchema,
 				},

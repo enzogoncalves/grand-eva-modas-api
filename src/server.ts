@@ -3,6 +3,7 @@ import fastifySwagger from "@fastify/swagger";
 import ScalarApiReference from "@scalar/fastify-api-reference";
 import Fastify from "fastify";
 import {
+	jsonSchemaTransform,
 	serializerCompiler,
 	validatorCompiler,
 } from "fastify-type-provider-zod";
@@ -42,6 +43,7 @@ server.register(fastifySwagger, {
 			version: "1.0.0",
 		},
 	},
+	transform: jsonSchemaTransform
 });
 
 server.register(ScalarApiReference, {
