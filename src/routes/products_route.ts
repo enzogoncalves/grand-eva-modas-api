@@ -28,11 +28,10 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 	app.get(
 		"/",
 		{
-			// preHandler: [app.authenticate],
+			preHandler: [app.authenticate],
 			schema: {
 				tags: ["PRODUCTS"],
 				summary: "get products",
-				params: paramsSchema,
 				response: {
 					200: ProductSchema.array(),
 					500: z.object({
@@ -50,10 +49,13 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 						imageUrl: true,
 						imageName: true,
 						isReserved: true,
-						likes: true,
 						name: true,
 						price: true,
 						type: true,
+						likedByUserIds: true,
+						likedByUsers: true,
+						reservedByUser: true,
+						reservedByUserId: true
 					},
 				});
 
@@ -93,10 +95,13 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 						imageUrl: true,
 						imageName: true,
 						isReserved: true,
-						likes: true,
 						name: true,
 						price: true,
 						type: true,
+						likedByUserIds: true,
+						likedByUsers: true,
+						reservedByUser: true,
+						reservedByUserId: true
 					},
 				});
 
@@ -198,6 +203,9 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 									type: type,
 									name: name,
 								},
+							}).catch((err) => {
+								console.log(err)
+								prismaErrorHandler(reply, err)
 							});
 							return reply
 								.status(200)
@@ -323,28 +331,17 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 							id: userId,
 						},
 						select: {
-							likedProducts: true,
+							likedProductIds: true
 						},
 					});
 
 					if (!user)
 						return reply.status(500).send({ error: "Unable to find user." });
 
-					const isProductAlreadyLiked = user.likedProducts.includes(parsedId);
+					const isProductAlreadyLiked = user.likedProductIds.includes(parsedId);
 
 					if (isProductAlreadyLiked)
 						return reply.status(409).send({ message: "Product already liked" });
-
-					await tx.product.update({
-						where: {
-							id: parsedId,
-						},
-						data: {
-							likes: {
-								increment: 1,
-							},
-						},
-					});
 
 					await tx.user.update({
 						where: {
@@ -352,7 +349,7 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 						},
 						data: {
 							likedProducts: {
-								push: parsedId,
+								connect: { id: params.data.productId }
 							},
 						},
 					});
@@ -396,42 +393,30 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 							id: userId,
 						},
 						select: {
-							likedProducts: true,
+							likedProductIds: true,
 						},
 					});
 
 					if (!user)
 						return reply.status(500).send({ error: "Unable to find user." });
 
-					const isProductAlreadyLiked = user.likedProducts.includes(parsedId);
+					const isProductAlreadyLiked = user.likedProductIds.includes(parsedId);
 
 					if (!isProductAlreadyLiked)
 						return reply
 							.status(409)
 							.send({ message: "Product already disliked" });
 
-					await tx.product.update({
-						where: {
-							id: parsedId,
-						},
-						data: {
-							likes: {
-								decrement: 1,
-							},
-						},
-					});
-
-					const likedProductsWithoutDislikedOne = user.likedProducts.filter(
-						(value) => value !== params.data.productId,
-					);
 
 					await tx.user.update({
 						where: {
 							id: userId,
 						},
 						data: {
-							likedProducts: likedProductsWithoutDislikedOne,
-						},
+							likedProducts: {
+								disconnect: { id: params.data.productId }
+							}
+						}
 					});
 				});
 
@@ -467,25 +452,18 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 
 			try {
 				const result = await prisma.$transaction(async (tx) => {
-					const user = await tx.user.findUnique({
+					const product = await tx.user.findUnique({
 						where: {
 							id: userId,
 						},
 						select: {
-							reservedProducts: true,
+							reservedProducts: {
+								where: { id: params.data.productId}
+							},
 						},
 					});
 
-					const product = await tx.product.findUnique({
-						where: {
-							id: parsedId,
-						},
-						select: {
-							isReserved: true,
-						},
-					});
-
-					if (!user || !product) {
+					if (!product) {
 						throw new PrismaClientKnownRequestError(
 							"PrismaClientKnownRequestError",
 							{
@@ -499,8 +477,9 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 						);
 					}
 
-					const isProductAlreadyReserved =
-						user.reservedProducts.includes(parsedId);
+					console.log(product)
+					
+					const isProductAlreadyReserved = product.reservedProducts.length !== 0;
 
 					if (isProductAlreadyReserved) {
 						return reply
@@ -508,22 +487,18 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 							.send({ message: "Product already reserved" });
 					}
 
-					await tx.product.update({
-						where: {
-							id: parsedId,
-						},
-						data: {
-							isReserved: true,
-						},
-					});
-
 					await tx.user.update({
 						where: {
 							id: userId,
 						},
 						data: {
 							reservedProducts: {
-								push: parsedId,
+								update: {
+									where: { id: params.data.productId},
+									data: {
+										isReserved: true
+									}
+								}
 							},
 						},
 					});

@@ -26,3 +26,16 @@ TODO: configure biome
 
 TODO: Schema of response for every route
 TODO: .env para versão do prisma nas chamadas manuais de errors
+
+
+/USER
+
+*DADOS DO USUÁRIO VIRÃO DE UMA REQUISIÇÃO AO BANCO DE DADOS COM O ID DO USUÁRIO QUE SABEREMOS PELO TOKEN ENVIADO PELO HEADER*
+
+GET
+/ -> retorna os dados do usuário
+/products/reserved -> retorna todos os produtos que o usuário reservou
+/products/liked -> retorna todos os produtos que o usuário gostou
+
+PATCH
+/ -> atualiza algum dado do usuário

@@ -15,6 +15,7 @@ import { authRoute } from "./routes/auth_route.js";
 import { authPlugin } from "./middlewares/token_verification.js";
 import fastifyMultipart from "@fastify/multipart";
 import fastifyJwt from "@fastify/jwt";
+import { userRoute } from "./routes/user_route.js";
 
 const server = Fastify().withTypeProvider<ZodTypeProvider>();
 
@@ -51,6 +52,7 @@ server.register(ScalarApiReference, {
 });
 
 server.register(authRoute, { prefix: "/auth" });
+server.register(userRoute, { prefix: "/user" });
 server.register(productsRoute, { prefix: "/products" });
 
 server.listen({ port: env.PORT, host: "0.0.0.0" }).then(() => {
