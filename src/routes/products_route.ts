@@ -1,6 +1,6 @@
 import type { FastifyError } from "fastify";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
-import { deleteObject, ref, uploadBytes } from "firebase/storage";
+import { deleteObject, listAll, ref, uploadBytes } from "firebase/storage";
 import sharp from "sharp";
 import { z } from "zod";
 import { ProductSchema } from "../../prisma/generated/zod/index.js";
@@ -135,8 +135,14 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 				tags: ["PRODUCTS"],
 				summary: "create a product",
 				response: {
-					200: z.object({
-						message: z.string(),
+					200: ProductSchema.pick({
+						id: true,
+						imageName: true,
+						imageUrl: true,
+						name: true,
+						price: true,
+						type: true,
+						data: true
 					}),
 					400: z.object({
 						error: z.string(),
@@ -155,8 +161,9 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 				},
 			});
 
-			if (!data)
+			if (!data) {
 				return reply.code(400).send({ error: "Nenhum arquivo enviado" });
+			}
 
 			// helper to extract the field value from Multipart | Multipart[] | MultipartFile variants
 			const getFieldValue = (field: any): any => {
@@ -183,56 +190,66 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 				const fileName = `produtos/${Date.now()}-${data.filename}.webp`;
 
 				const imageRef = ref(storage, fileName);
-
-				uploadBytes(imageRef, processedBuffer, {
+				
+				const storageSnapshot = await uploadBytes(imageRef, processedBuffer, {
 					customMetadata: {
 						/**TODO: add image metadata */
 					},
 				})
-					.then(async (snapshot) => {
-						try {
-							// PRISMA PRODUCT CREATION
-							const featuresJson = JSON.parse(features);
 
-							await prisma.product.create({
-								data: {
-									data: featuresJson,
-									imageName: fileName,
-									imageUrl: `https://firebasestorage.googleapis.com/v0/b/grand-eva-modas.firebasestorage.app/o/produtos%2F${snapshot.metadata.name}?alt=media`,
-									price: price,
-									type: type,
-									name: name,
-								},
-							}).catch((err) => {
-								console.log(err)
-								prismaErrorHandler(reply, err)
-							});
-							return reply
-								.status(200)
-								.send({ message: "Produto criado com sucesso!" });
-						} catch (_e) {
-							console.error(
-								"Failed to create product. Initializing image rollback",
-							);
-							deleteObject(imageRef)
-								.then(() => {
-									return reply
-										.code(500)
-										.send({ error: "Não foi possível criar este produto" });
-								})
-								.catch((e) => {
-									console.error(`Não foi possível deletar a imagem: ${e}`);
-									return reply
-										.code(500)
-										.send({ error: "Não foi possível deletar a imagem" });
-								});
+				console.log(storageSnapshot)
+
+				if(storageSnapshot) {
+					try {
+						// PRISMA PRODUCT CREATION
+						const featuresJson = JSON.parse(features);
+
+						const product = await prisma.product.create({
+							data: {
+								data: featuresJson,
+								imageName: fileName,
+								imageUrl: `https://firebasestorage.googleapis.com/v0/b/grand-eva-modas.firebasestorage.app/o/produtos%2F${storageSnapshot.metadata.name}?alt=media`,
+								price: price,
+								type: type,
+								name: name,
+							},
+							select: {
+								data: true,
+								id: true,
+								imageName: true,
+								imageUrl: true,
+								name: true,
+								price: true,
+								type: true,
+							}
+						}).catch((err) => {
+							console.log(err)
+							prismaErrorHandler(reply, err)
+						});
+
+						if(!product) {
+							return reply.status(400).send({ error: "Unable to create product"})
 						}
-					})
-					.catch((e) => {
-						return reply
-							.code(500)
-							.send({ error: "Não foi possível fazer o upload da sua imagem" });
-					});
+
+						return reply.status(200).send(product)
+					} catch (_e) {
+						console.error(
+							"Failed to create product. Initializing image rollback",
+						);
+						deleteObject(imageRef)
+							.then(() => {
+								return reply
+									.code(500)
+									.send({ error: "Não foi possível criar este produto" });
+							})
+							.catch((e) => {
+								console.error(`Não foi possível deletar a imagem: ${e}`);
+								return reply
+									.code(500)
+									.send({ error: "Não foi possível deletar a imagem" });
+							});
+					}
+				}
 			} catch (err) {
 				app.log.error(err);
 				return reply.code(500).send({ error: "Erro ao processar imagem" });
@@ -251,9 +268,37 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 				summary: "delete all products",
 			},
 		},
-		async (req, res) => {
-			await prisma.product.deleteMany({});
+		async (req, reply) => {
+			const productsDeleted = await prisma.product.deleteMany({});
+
+			if(productsDeleted.count === 0) return reply.status(200).send()
 			//TODO: delete the storage as well
+
+			// Create a reference under which you want to list
+			const listRef = ref(storage, 'produtos');
+
+			// Find all the prefixes and items.
+			listAll(listRef)
+				.then((res) => {
+					res.items.forEach((itemRef) => {
+						deleteObject(itemRef)
+							.then(() => {
+								return reply
+									.code(500)
+									.send({ error: "Não foi possível criar este produto" });
+							})
+							.catch((e) => {
+								console.error(`Não foi possível deletar a imagem: ${e}`);
+								return reply
+									.code(500)
+									.send({ error: "Não foi possível deletar a imagem" });
+							});
+					});
+				}).catch((error) => {
+					console.log(error)
+					return reply.status(500).send({ message: "Não foi possível deletar as imagens"})
+				});
+
 		},
 	);
 
@@ -283,17 +328,21 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 					},
 				});
 
-				const imageRef = ref(storage, product.imageName);
+				console.log('aqui')
 
-				deleteObject(imageRef)
-					.then(() => {
-						return reply.status(200).send();
-					})
-					.catch((error) => {
-						return reply
-							.status(500)
-							.send("Um erro ocorreu ao deletar a imagem");
-					});
+				if(product.imageName) {
+					try {
+						const imageRef = ref(storage, product.imageName);
+						await deleteObject(imageRef)
+					} catch(storageError) {
+						console.error("Storage deletion failed:", storageError);
+						return reply.status(207).send({ 
+							message: "Product deleted, but image cleanup failed." 
+						});
+					}
+				}
+
+				return reply.status(204).send()
 			} catch (e) {
 				prismaErrorHandler(reply, e);
 			}
@@ -458,7 +507,7 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 						},
 						select: {
 							reservedProducts: {
-								where: { id: params.data.productId}
+								where: { id: parsedId}
 							},
 						},
 					});
@@ -476,8 +525,6 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 							},
 						);
 					}
-
-					console.log(product)
 					
 					const isProductAlreadyReserved = product.reservedProducts.length !== 0;
 
@@ -493,14 +540,11 @@ export const productsRoute: FastifyPluginAsyncZod = async (app) => {
 						},
 						data: {
 							reservedProducts: {
-								update: {
-									where: { id: params.data.productId},
-									data: {
-										isReserved: true
-									}
-								}
-							},
-						},
+								connect: {
+									id: parsedId
+								},
+							}
+						}
 					});
 				});
 
