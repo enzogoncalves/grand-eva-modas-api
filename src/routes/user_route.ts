@@ -79,23 +79,76 @@ export const userRoute: FastifyPluginAsyncZod = async (app) => {
 				return reply.status(400).send({error: 'Unable to find user'})
 			}
 
-			const products = await prisma.product.findMany({
-				where: {
-					likedByUsers: {
-						every: {
-							id: userId
-						}
-					}
-				}
-			})
-
-			if(!products) {
+			if(!user.likedProducts) {
 				return reply.status(400).send({error: 'Unable to find products'})
 			}
 
-			reply.status(200).send(products)
+			reply.status(200).send(user.likedProducts)
 		} catch(e) {
 			prismaErrorHandler(reply, e)
 		}
-	}) 
+	})
+
+	// get reserved products by a user
+	app.get('/products/reserved', {
+		preHandler: [app.authenticate],
+		schema: {
+			summary: "get reserved products by a user",
+			tags: ["USER"],
+			response: {
+				200: ProductSchema.array(),
+				400: z.object({
+					error: z.string()
+				})
+			}
+		}
+	}, async (req, reply) => {
+		const { userId } = req.user
+
+		try {
+			const user = await prisma.user.findUnique({
+				where: {
+					id: userId
+				}, select: {
+					reservedProducts: true
+				}
+			})
+
+			console.log(user?.reservedProducts)
+
+			if(!user) {
+				return reply.status(400).send({error: 'Unable to find user'})
+			}
+
+			if(!user.reservedProducts) {
+				return reply.status(400).send({error: 'Unable to find products'})
+			}
+
+			reply.status(200).send(user.reservedProducts)
+		} catch(e) {
+			prismaErrorHandler(reply, e)
+		}
+	})
+
+	// update user data
+	app.patch('/', {
+		schema: {
+			tags: ['USERS'],
+			summary: 'update user data',
+			body: z.object({
+				
+			})
+		}
+	}, (req, reply) => {
+		const { userId } = req.user
+
+		prisma.user.update({
+			where: {
+				id: userId
+			},
+			data: {
+				
+			}
+		})
+	})
 };
