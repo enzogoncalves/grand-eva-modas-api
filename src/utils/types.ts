@@ -11,11 +11,16 @@ declare module "fastify" {
 			request: FastifyRequest,
 			reply: FastifyReply,
 		) => Promise<void>;
+		authorize_admin: (
+			request: FastifyRequest,
+			reply: FastifyReply,
+		) => Promise<void>;
 	}
 }
 
 const userPayload = z.object({
 	userId: z.string(),
+	role: z.enum(["USER", "ADMIN"]),
 });
 
 type UserPayload = z.infer<typeof userPayload>;

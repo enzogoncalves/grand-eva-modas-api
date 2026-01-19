@@ -103,6 +103,11 @@ export const authPlugin: FastifyPluginAsyncZod = async (app) => {
 					},
 					select: {
 						userId: true,
+						user: {
+							select: {
+								role: true,
+							},
+						},
 					},
 				})
 				.then(async (data) => {
@@ -116,6 +121,7 @@ export const authPlugin: FastifyPluginAsyncZod = async (app) => {
 
 					req.user = {
 						userId: data.userId,
+						role: data.user.role,
 					};
 				})
 				.catch((e) => {
@@ -125,6 +131,18 @@ export const authPlugin: FastifyPluginAsyncZod = async (app) => {
 						message: "Something went wrong while getting the token",
 					});
 				});
+		},
+	);
+
+	app.decorate(
+		"authorize_admin",
+		async (req: FastifyRequest<Object>, reply: FastifyReply) => {
+			if (req.user.role !== "ADMIN") {
+				return reply.status(403).send({
+					error: "Forbidden",
+					message: "You do not have permission to access this resource.",
+				});
+			}
 		},
 	);
 };

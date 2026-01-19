@@ -7,6 +7,7 @@ import z from "zod";
 import { AuthTokenSchema } from "../../prisma/generated/zod/index.js";
 import { env } from "../env.js";
 import { prisma } from "../lib/prisma.js";
+import { prismaErrorHandler } from "../lib/prismaErrorHandler.js";
 
 const authTokenWithoutIdsSchema = AuthTokenSchema.omit({
 	id: true,
@@ -246,6 +247,35 @@ export const authRoute: FastifyPluginAsyncZod = async (app) => {
 					}
 				}
 			}
+		},
+	);
+
+	app.patch(
+		"/createAdmin",
+		{
+			preHandler: [app.authenticate, app.authorize_admin],
+			schema: {
+				body: z.object({
+					requestedUserId: z.string(),
+				}),
+			},
+		},
+		async (req, reply) => {
+			const { requestedUserId } = req.body;
+			try {
+				await prisma.user.update({
+					where: {
+						id: requestedUserId,
+					},
+					data: {
+						role: "ADMIN",
+					},
+				});
+			} catch (e) {
+				prismaErrorHandler(reply, e);
+			}
+
+			reply.status(200).send();
 		},
 	);
 };

@@ -44,7 +44,7 @@ server.register(fastifySwagger, {
 			version: "1.0.0",
 		},
 	},
-	transform: jsonSchemaTransform
+	transform: jsonSchemaTransform,
 });
 
 server.register(ScalarApiReference, {
